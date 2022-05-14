@@ -18,7 +18,8 @@
 #include "snake.h"
 #endif
 
-int g_game_speed = 100;
+int g_game_speed = 50;
+int g_score = 0;
 
 void game_loop(struct Queue* q, int screenWidth, int screenHeight);
 
@@ -134,12 +135,11 @@ void game_loop(struct Queue* q, int screenWidth, int screenHeight){
 		
 		//check new head for collision
 		char atPos = mvinch(newSnakeHead->y, newSnakeHead->x) & A_CHARTEXT;
-		if (atPos == ACS_DIAMOND){
+		if (atPos == (char) ACS_DIAMOND){
 			//fucking die
 			moveX = 0;
 			moveY = 0;
-			refresh();
-			return;
+			break;
 		}
 		else if (atPos == '%'){
 			//food
