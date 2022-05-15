@@ -13,8 +13,9 @@
 #include <stdlib.h>
 #endif
 
-#ifndef __UNISTD_H__
-#define __UNISTD_H__
+#ifdef _WIN32
+#include <Windows.h>
+#else
 #include <unistd.h>
 #endif
 
