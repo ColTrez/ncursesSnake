@@ -116,6 +116,9 @@ void game_loop(struct Queue* q, WINDOW* board){
 	bool foodPlaced = false;
 	int screenWidth = getmaxx(board);
 	int screenHeight = getmaxy(board);
+
+	//color for the food
+	init_pair(3, COLOR_YELLOW, COLOR_BLACK);
 	
 	//start moving right by default
 	int moveX = 1;
@@ -178,8 +181,10 @@ void game_loop(struct Queue* q, WINDOW* board){
 			//check to make sure the location does overlap with the snake
 			char atFoodPos = mvwinch(board, foodY, foodX) & A_CHARTEXT;
 			if (atFoodPos == ' '){
+				wattron(board, COLOR_PAIR(3));
 				mvwaddch(board, foodY, foodX, '%');
 				foodPlaced = true;
+				wattron(board, COLOR_PAIR(1));
 			}
 		}
 		
