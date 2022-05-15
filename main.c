@@ -13,18 +13,27 @@
 #include <stdlib.h>
 #endif
 
+#ifndef __UNISTD_H__
+#define __UNISTD_H__
+#include <unistd.h>
+#endif
+
 #ifndef __SNAKE_H__
 #define __SNAKE_H__
 #include "snake.h"
 #endif
 
-int g_game_speed = 50;
+#define BOARD_WIDTH 80
+#define BOARD_HEIGHT 40
+
+int g_game_speed = 70;
 int g_score = 0;
 
-void game_loop(struct Queue* q, int screenWidth, int screenHeight);
+void game_loop(struct Queue* q, WINDOW* board);
 
 int main(int argc, char* argv[]){
 	
+
 	initscr();
 	timeout(g_game_speed);
 	start_color();
@@ -36,6 +45,10 @@ int main(int argc, char* argv[]){
 	init_pair(1, COLOR_CYAN, COLOR_BLACK);
 	attron(COLOR_PAIR(1));
 	printw("Press F1 to exit");
+	int scoreY = ((getmaxy(stdscr)/2)-(BOARD_HEIGHT/2))-1;
+	int scoreX = ((getmaxx(stdscr)/2)-(BOARD_WIDTH/2))+1;
+	mvaddstr(scoreY, scoreX, "Score: ");
+	printw("%d", g_score);
 	refresh();
 
 	int height = getmaxy(stdscr);
@@ -43,28 +56,65 @@ int main(int argc, char* argv[]){
 	int startY = height/2;
 	int startX = width/2;
 
-	Queue* snake = initial_snake(startY, startX);
+	WINDOW* gameboard = newwin(BOARD_HEIGHT, BOARD_WIDTH, startY-(BOARD_HEIGHT/2), startX-(BOARD_WIDTH/2));
+	box(gameboard, 0, 0);
+	wrefresh(gameboard);
+
+	Queue* snake = initial_snake(BOARD_HEIGHT/2, BOARD_HEIGHT/2);
+	start_color();
+	wattron(gameboard, COLOR_PAIR(1));
 	//draw the initial snake
 	Segment* sp = snake->head;
 	while (sp->next != NULL){
-		mvaddch(sp->y, sp->x, ACS_DIAMOND);
+		mvwaddch(gameboard, sp->y, sp->x, ACS_DIAMOND);
 		sp = sp->next;
 	}
-	mvaddch(sp->y, sp->x, '>');
+	mvwaddch(gameboard, sp->y, sp->x, '>');
 
-	refresh();
+	wrefresh(gameboard);
 
 	srand((unsigned int) time(NULL));//seed the random number generator for food placement
-	game_loop(snake, width, height);
+	game_loop(snake, gameboard);
 
 	endwin();
 	return 0;
 }
 
+void you_died(struct Queue* q, WINDOW* board, char headChar){
+	init_pair(2, COLOR_RED, COLOR_BLACK);
+	wattron(board, COLOR_PAIR(2));
 
-void game_loop(struct Queue* q, int screenWidth, int screenHeight){
+	Segment* sp = q->head;
+	while (sp->next != NULL){
+		mvwaddch(board, sp->y, sp->x, ACS_DIAMOND);
+		sp = sp->next;
+	}
+	mvwaddch(board, sp->y, sp->x, headChar);
+	wrefresh(board);
+	
+	sleep(3);
+
+	wattroff(board, COLOR_PAIR(2));
+	int i;
+	int j;
+	for(i=1; i < getmaxx(board)-1; i++)
+		for(j=1; j < getmaxy(board)-1; j++)
+			mvwaddch(board, j, i, ' ');
+
+	wattron(board, COLOR_PAIR(2));
+	int messageX = getmaxx(board)/2;
+	int messageY = getmaxy(board)/2;
+	mvwaddstr(board, messageY, messageX-4, "YOU DIED");
+	wrefresh(board);
+
+	sleep(3);
+}
+
+void game_loop(struct Queue* q, WINDOW* board){
 	int ch;
 	bool foodPlaced = false;
+	int screenWidth = getmaxx(board);
+	int screenHeight = getmaxy(board);
 	
 	//start moving right by default
 	int moveX = 1;
@@ -121,43 +171,64 @@ void game_loop(struct Queue* q, int screenWidth, int screenHeight){
 		}
 
 		if (!foodPlaced){
-			//todo: make food
-			int foodX = rand() % screenWidth;
-			int foodY = rand() % screenHeight;
-			mvaddch(foodY, foodX, '%');
-			foodPlaced = true;
+			//place a piece of food at a random location
+			int foodX = (rand() % (screenWidth-1)) + 1;
+			int foodY = (rand() % (screenHeight-1)) + 1;
+			//check to make sure the location does overlap with the snake
+			char atFoodPos = mvwinch(board, foodY, foodX) & A_CHARTEXT;
+			if (atFoodPos == ' '){
+				mvwaddch(board, foodY, foodX, '%');
+				foodPlaced = true;
+			}
 		}
 		
-		//move
+		//get new location of snake head
 		Segment* newSnakeHead = create_segment(q->tail->y + moveY, q->tail->x + moveX);
 		//replace old head char with body char
-		mvaddch(q->tail->y, q->tail->x, ACS_DIAMOND);
+		mvwaddch(board, q->tail->y, q->tail->x, ACS_DIAMOND);
 		
 		//check new head for collision
-		char atPos = mvinch(newSnakeHead->y, newSnakeHead->x) & A_CHARTEXT;
-		if (atPos == (char) ACS_DIAMOND){
-			//fucking die
+		//first check for out of bounds
+		if (newSnakeHead->x == 0 || newSnakeHead->x == screenWidth-1 || newSnakeHead->y == 0 || newSnakeHead->y == screenHeight-1){
+			//then die
 			moveX = 0;
 			moveY = 0;
+			you_died(q, board, headChar);
+			return;
+		}
+		//then check if snake hit its own body or got some food
+		char atPos = mvwinch(board, newSnakeHead->y, newSnakeHead->x) & A_CHARTEXT;
+		if (atPos == (char) ACS_DIAMOND){
+			//then die
+			moveX = 0;
+			moveY = 0;
+			you_died(q, board, headChar);
 			break;
 		}
 		else if (atPos == '%'){
-			//food
+			//snek eat food
 			enqueue(q, newSnakeHead);
-			mvaddch(newSnakeHead->y, newSnakeHead->x, headChar);
+			mvwaddch(board, newSnakeHead->y, newSnakeHead->x, headChar);
 			foodPlaced = false;
-
+			//update score
+			g_score++;
+			int scoreY = ((getmaxy(stdscr)/2)-(BOARD_HEIGHT/2))-1;
+			int scoreX = ((getmaxx(stdscr)/2)-(BOARD_WIDTH/2))+1;
+			mvaddstr(scoreY, scoreX, "Score: ");
+			printw("%d", g_score);
+			refresh();
 		}
 		else {
 			enqueue(q, newSnakeHead);
-			mvaddch(newSnakeHead->y, newSnakeHead->x, headChar);
+			mvwaddch(board, newSnakeHead->y, newSnakeHead->x, headChar);
 			//replace tail with space
 			Segment* oldSnakeTail = dequeue(q);
-			mvaddch(oldSnakeTail->y, oldSnakeTail->x, ' ');
+			mvwaddch(board, oldSnakeTail->y, oldSnakeTail->x, ' ');
 			free(oldSnakeTail);
 		}
 
-		refresh();
+		//refresh();
+		wrefresh(board);
 	}
 
 }
