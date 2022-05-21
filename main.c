@@ -1,28 +1,13 @@
-#ifndef __NCURSES_H__
-#define __NCURSES_H__
-#include <ncurses.h>
-#endif
-
-#ifndef __TIME_H__
-#define __TIME_H__
-#include <time.h>
-#endif
-
-#ifndef __STDLIB_H__
-#define __STDLIB_H__
-#include <stdlib.h>
-#endif
-
 #ifdef _WIN32
 #include <Windows.h>
 #else
 #include <unistd.h>
 #endif
 
-#ifndef __SNAKE_H__
-#define __SNAKE_H__
+#include <ncurses.h>
+#include <time.h>
+#include <stdlib.h>
 #include "snake.h"
-#endif
 
 #define BOARD_WIDTH 80
 #define BOARD_HEIGHT 40
