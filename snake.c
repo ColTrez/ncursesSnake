@@ -1,9 +1,6 @@
 #ifndef __SNAKE_H__
+#define __SNAKE_H__
 #include "snake.h"
-#endif
-
-#ifndef __STDLIB_H__
-#include <stdlib.h>
 #endif
 
 struct Segment* create_segment(int newY, int newX){

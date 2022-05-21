@@ -33,7 +33,6 @@ int g_score = 0;
 void game_loop(struct Queue* q, WINDOW* board);
 
 int main(int argc, char* argv[]){
-	
 
 	initscr();
 	timeout(g_game_speed);

@@ -1,3 +1,7 @@
+#ifndef __STDLIB_H__
+#define __STDLIB_H__
+#include <stdlib.h>
+#endif
 //segment of the snake's body, implemented as a singly linked list
 struct Segment{
 	int y;
